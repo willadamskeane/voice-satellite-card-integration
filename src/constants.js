@@ -33,6 +33,16 @@ export const EXPECTED_ERRORS = [
   'duplicate_wake_up_detected',
 ];
 
+/**
+ * Pipeline errors that mean "nobody spoke" when no speech was detected in the
+ * run. After a false wake, some STT engines (e.g. Home Assistant Cloud) end
+ * silence with stt-stream-failed rather than stt-no-text-recognized. With
+ * speech detected, these remain real errors.
+ */
+export const NO_SPEECH_ERRORS = [
+  'stt-stream-failed',
+];
+
 /** Blur overlay reason identifiers */
 export const BlurReason = {
   PIPELINE: 'pipeline',

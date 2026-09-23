@@ -63,6 +63,8 @@ export class PipelineManager {
     this._runStartReceived = false;
     this._wakeWordPhase = false;
     this._errorReceived = false;
+    // Whether STT reported speech (stt-vad-start) in the current run.
+    this._speechDetected = false;
 
     // Per-turn state for the voice_satellite_chat event:
     // accumulated during a single pipeline run, fired and cleared at intent-end.
@@ -113,6 +115,7 @@ export class PipelineManager {
   get isRestarting() { return this._isRestarting; }
   get serviceUnavailable() { return this._serviceUnavailable; }
   set serviceUnavailable(val) { this._serviceUnavailable = val; }
+  get speechDetected() { return this._speechDetected; }
   get shouldContinue() { return this._shouldContinue; }
   set shouldContinue(val) { this._shouldContinue = val; }
   get continueConversationId() { return this._continueConversationId; }
@@ -610,10 +613,19 @@ export class PipelineManager {
       this._log.error('pipeline', `stop() failed during restartContinue: ${e?.message || e}`);
     });
   }
+  handleSttStart() {
+    this._speechDetected = false;
+  }
+
+  handleSttVadStart() {
+    this._speechDetected = true;
+  }
+
   handleRunStart(data) {
     this._runStartReceived = true;
     this._wakeWordPhase = false;
     this._errorReceived = false;
+    this._speechDetected = false;
     handleRunStart(this, data);
     this._startTokenRefreshTimer();
   }

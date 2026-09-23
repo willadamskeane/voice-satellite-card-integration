@@ -4,7 +4,7 @@
  * Handlers for all pipeline event types (run-start through error).
  */
 
-import { State, INTERACTING_STATES, EXPECTED_ERRORS, BlurReason, Timing } from '../constants.js';
+import { State, INTERACTING_STATES, EXPECTED_ERRORS, NO_SPEECH_ERRORS, BlurReason, Timing } from '../constants.js';
 import { getSwitchState, getSatelliteAttr } from '../shared/satellite-state.js';
 import { CHIME_WAKE, getChimeDuration } from '../audio/chime.js';
 import { onTTSComplete } from '../session/events.js';
@@ -569,8 +569,10 @@ export function handleError(mgr, errorData) {
     return;
   }
 
-  if (EXPECTED_ERRORS.includes(errorCode)) {
-    mgr.log.log('pipeline', `Expected error: ${errorCode} - restarting`);
+  // A false wake that heard nothing is not an error the user needs to see.
+  const noSpeech = NO_SPEECH_ERRORS.includes(errorCode) && !mgr.speechDetected;
+  if (EXPECTED_ERRORS.includes(errorCode) || noSpeech) {
+    mgr.log.log('pipeline', `Expected error: ${errorCode}${noSpeech ? ' (no speech)' : ''} - restarting`);
 
     // Special case for cross-tablet wake word dedupe: if our wake chime
     // is still pending (we're inside the WAKE_DEDUPE_WINDOW_MS window

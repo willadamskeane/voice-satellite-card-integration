@@ -740,9 +740,13 @@ export function handlePipelineMessage(session, message) {
     case 'wake_word-end': session.pipeline.handleWakeWordEnd(eventData); break;
     case 'stt-start':
       setState(session, State.STT);
+      session.pipeline.handleSttStart();
       session.pipeline.armVadWatchdog();
       break;
-    case 'stt-vad-start': session.logger.log('event', 'VAD: speech started'); break;
+    case 'stt-vad-start':
+      session.pipeline.handleSttVadStart();
+      session.logger.log('event', 'VAD: speech started');
+      break;
     case 'stt-vad-end':
       session.logger.log('event', 'VAD: speech ended');
       session.pipeline.armVadWatchdog();

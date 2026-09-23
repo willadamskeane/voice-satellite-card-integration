@@ -207,3 +207,36 @@ test('normal restart resumes server audio', async () => {
   assert.equal(f.calls.sends, 1);
   assert.equal(f.toasts.length, 0);
 });
+
+test('a stream failure with no detected speech restarts silently', async () => {
+  const f = await fixture();
+  f.pipeline.handleRunStart({});
+  f.pipeline.handleSttStart();
+  f.pipeline.handleError({ code: 'stt-stream-failed', message: 'Speech-to-text stream failed' });
+  await flush();
+  assert.equal(f.toasts.length, 0);
+  assert.equal(f.timers.size, 1, 'expected a restart');
+});
+
+test('a stream failure after speech was detected is still reported', async () => {
+  const f = await fixture();
+  f.pipeline.handleRunStart({});
+  f.pipeline.handleSttStart();
+  f.pipeline.handleSttVadStart();
+  f.pipeline.handleError({ code: 'stt-stream-failed', message: 'Speech-to-text stream failed' });
+  await flush();
+  assert.equal(f.toasts.length, 1);
+  assert.equal(f.toasts[0].severity, 'error');
+});
+
+test('speech detected in an earlier run does not hide a later failure, and vice versa', async () => {
+  const f = await fixture();
+  f.pipeline.handleRunStart({});
+  f.pipeline.handleSttStart();
+  f.pipeline.handleSttVadStart();
+  f.pipeline.handleRunStart({});
+  assert.equal(f.pipeline.speechDetected, false);
+  f.pipeline.handleSttVadStart();
+  f.pipeline.handleSttStart();
+  assert.equal(f.pipeline.speechDetected, false);
+});
