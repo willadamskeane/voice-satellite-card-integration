@@ -14,6 +14,49 @@
 <a href="https://buymeacoffee.com/jxlarrea"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a>
 </p>
 
+## About this fork
+
+This is [Will Adams-Keane](https://github.com/willadamskeane)'s fork of [jxlarrea/voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration). It runs on a Lenovo ThinkSmart View wall tablet (Kiosk Satellite app, far-field mic) with an OpenAI conversation agent. There, Home Assistant Cloud speech-to-text was slow and often wrong, nothing showed what the tablet had heard until the user finished speaking, and every false wake left a "Voice Satellite error" toast on screen until someone tapped it.
+
+**The changes live on the [`feat/live-transcription`](https://github.com/willadamskeane/voice-satellite-card-integration/tree/feat/live-transcription) branch.** This `main` branch tracks upstream. The fork branch is based on upstream 2026.9.12 and versioned `2026.9.12-live.1`.
+
+### What's different
+
+**Live transcription with OpenAI** (opt-in: `stt_live_transcription`, `stt_live_model`)
+
+- Words appear on screen as the user speaks, updating one chat bubble in place, and the finished transcript goes to the assistant faster.
+- It's a hybrid design. The turn still runs through Home Assistant's pipeline from the STT stage, which keeps cross-device wake dedupe, HA's end-of-speech detection, and HA's transcript as a fallback. The same audio is also streamed to an OpenAI Realtime transcription session (`gpt-live-transcribe` by default). When HA reports the end of speech, the live session is committed, and the first usable transcript (live, else HA's) starts a text run at the intent stage. The run keeps the turn's conversation id, extra prompt and pipeline slot.
+- The OpenAI key never reaches the browser. The new `voice_satellite/stt_live_session` command mints a short-lived client secret for a transcription-only session, using the API key of the OpenAI Conversation integration.
+- Each session carries up to 100 keywords built from the home's area names and the Assist-exposed device names, so room and device names are spelled right.
+- Measured on the kiosk and against the API: words appear 0.2–0.4 s behind speech, and the final text arrives 0.4–0.6 s after the end of speech. OpenAI bills it at $0.017 per minute of audio. The model must be allowed in your OpenAI project, which otherwise returns `model_not_found`.
+- With this on, Kiosk Satellite streams audio into the page instead of uploading it natively, because the page needs the audio. `ask_question` turns keep HA's own speech-to-text.
+
+**No error toast for a false wake**
+
+- After a false wake with no speech, HA Cloud ends the turn with `stt-stream-failed` instead of `stt-no-text-recognized`, and the card reported it as an error. The card now tracks whether speech was detected (`stt-vad-start`) in the run and treats that failure as "nobody spoke" when it wasn't. A failure after real speech still shows the toast. This fix is also at [willadamskeane/voice-satellite-card-integration#1](https://github.com/willadamskeane/voice-satellite-card-integration/pull/1).
+
+**Error toasts can time out** (`error_toast_timeout_s`)
+
+- Error toasts stay until dismissed, as upstream intends, unless you set a timeout in seconds. That suits an unattended wall tablet.
+
+**Pipeline 2 stays on Pipeline 2**
+
+- Text runs started by the card (live transcription, `voice_satellite.show`) now honor `wake_word_slot`, so a turn woken on the second wake word keeps its pipeline.
+
+### Installing this fork
+
+The built frontend isn't committed and the fork publishes no releases, so HACS would install upstream code. To install:
+
+```sh
+git clone -b feat/live-transcription https://github.com/willadamskeane/voice-satellite-card-integration.git
+cd voice-satellite-card-integration
+npm ci && npm run build
+# copy custom_components/voice_satellite into your Home Assistant config's custom_components/, then restart
+```
+
+Don't accept HACS updates for Voice Satellite afterwards: they replace the fork with upstream. Everything below is the upstream README.
+
+
 Turn any tablet, phone, or browser into a hands-free voice assistant for [Home Assistant](https://www.home-assistant.io) - like Alexa, Siri, or Google Home, but fully private and running on your own hardware. Just say the wake word and go: ask questions, control devices, set timers, get announcements, and see rich visual results - all without touching the screen.
 
 Voice Satellite works as a drop-in integration that transforms any web browser into a full [Assist satellite](https://www.home-assistant.io/voice-pe/) with wake word detection, media playback, and visual feedback.
