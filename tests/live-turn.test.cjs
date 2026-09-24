@@ -60,7 +60,7 @@ async function fixture({ live = true } = {}) {
     config: { satellite_entity: 'assist_satellite.test', stt_live_transcription: live },
     hass: { language: 'en', states: { 'assist_satellite.test': { attributes: { muted: false } } } },
     logger: { log: noop, error: noop }, currentState: 'IDLE',
-    toast: { show: noop, dismiss: noop }, chat,
+    toast: { shown: [], show(t) { this.shown.push(t); }, dismiss: noop }, chat,
     ui: { hideBar: noop, hideBlurOverlay: noop, showStartButton: noop },
     mediaPlayer: { resumeAfterInterrupt: noop }, tts: { storeStreamingUrl: noop, isPlaying: false },
     setState(state) { this.currentState = state; },
@@ -86,6 +86,7 @@ async function fixture({ live = true } = {}) {
     if (m.type === 'stt-vad-end') pipeline.handleSttVadEnd();
     if (m.type === 'stt-end') pipeline.handleSttEnd(m.data);
     if (m.type === 'run-end') pipeline.handleRunEnd();
+    if (m.type === 'stt-vad-start') pipeline.handleSttVadStart();
     if (m.type === 'error') pipeline.handleError(m.data);
   };
   const emit = (type, data) => card.onPipelineMessage({ type, data });
@@ -185,10 +186,12 @@ test('a turn with no speech from either source ends normally', async () => {
   assert.ok(t.closed);
 });
 
-test('an HA error before any transcript closes the live session', async () => {
+test('an HA error before any transcript closes the live session once it has answered', async () => {
   const f = await fixture();
   const t = await startSttTurn(f);
   f.emit('error', { code: 'stt-stream-failed', message: 'x' });
+  t.resolveFinal(null);
+  await flush();
   assert.ok(t.closed);
   assert.equal(f.pipeline.liveTurn, null);
 });
@@ -206,4 +209,38 @@ test('with live transcription off, STT turns are unchanged', async () => {
   assert.equal(FakeTranscriber.instances.length, 0);
   assert.equal(f.runs[0].message.end_stage, 'tts');
   assert.equal(f.card.audio.liveSink, null);
+});
+
+test('an HA stream failure after sound but no live words ends silently', async () => {
+  const f = await fixture();
+  const t = await startSttTurn(f);
+  f.emit('stt-vad-start', {});
+  f.emit('error', { code: 'stt-stream-failed', message: 'speech-to-text failed' });
+  assert.ok(t.committed, 'the live session is asked for its words');
+  assert.equal(f.card.toast.shown.length, 0, 'no toast while the live answer is pending');
+  t.resolveFinal(null);
+  await flush();
+  assert.equal(f.card.toast.shown.length, 0);
+  assert.equal(f.runs.length, 1, 'no intent run');
+  assert.ok(t.closed);
+});
+
+test('an HA stream failure still hands off words the live session heard', async () => {
+  const f = await fixture();
+  const t = await startSttTurn(f);
+  f.emit('stt-vad-start', {});
+  f.emit('stt-vad-end', {});
+  f.emit('error', { code: 'stt-stream-failed', message: 'speech-to-text failed' });
+  t.resolveFinal('Turn off the kitchen lights.');
+  await flush();
+  assert.equal(f.runs[1].message.intent_input, 'Turn off the kitchen lights.');
+  assert.equal(f.card.toast.shown.length, 0);
+});
+
+test('other errors during a live turn are still reported', async () => {
+  const f = await fixture();
+  await startSttTurn(f);
+  f.emit('error', { code: 'intent-failed', message: 'agent down' });
+  await flush();
+  assert.equal(f.card.toast.shown.length, 1);
 });

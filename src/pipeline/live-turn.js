@@ -109,6 +109,22 @@ export function handleLiveSttEnd(mgr, text) {
 }
 
 /**
+ * Home Assistant's STT failed with a "nothing recognized" error during a live
+ * turn. The live session decides: its words are handed to the intent stage as
+ * usual; if it heard nothing either, the turn was noise (typically a false
+ * wake in a room with music or a TV) and must end without an error toast.
+ * @param {import('./index.js').PipelineManager} mgr
+ * @returns {Promise<'handed-off'|'no-speech'|null>} null when no live turn applies
+ */
+export async function handleLiveSttFailure(mgr) {
+  const turn = mgr.liveTurn;
+  if (!turn || turn.handedOff || turn.finished) return null;
+  if (!turn.commit) handleLiveVadEnd(mgr); // commits and hands off if words arrive
+  await turn.commit;
+  return turn.handedOff ? 'handed-off' : 'no-speech';
+}
+
+/**
  * Whether the live turn takes over this run-end: after a handoff it belongs
  * to the replaced STT run; before one, the turn is still deciding and ends
  * the interaction itself if nothing was said.

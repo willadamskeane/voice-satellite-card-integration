@@ -11,7 +11,7 @@
  * it too, including restarts requested after announcement playback.
  */
 
-import { State, INTERACTING_STATES, BlurReason, Timing } from '../constants.js';
+import { State, INTERACTING_STATES, BlurReason, Timing, NO_SPEECH_ERRORS } from '../constants.js';
 import { getSelectState, getSwitchState } from '../shared/satellite-state.js';
 import { resumeNativeWake } from '../wake-word/native-handoff.js';
 import { subscribePipelineRun, setupReconnectListener } from './comms.js';
@@ -21,6 +21,7 @@ import {
   endLiveTurn,
   handleLiveRunStart,
   handleLiveSttEnd,
+  handleLiveSttFailure,
   handleLiveVadEnd,
   liveTranscriptionEnabled,
   liveTurnOwnsRunEnd,
@@ -717,8 +718,21 @@ export class PipelineManager {
       this._log.log('stt-live', `Ignoring ${data?.code} from the replaced STT run`);
       return;
     }
-    endLiveTurn(this);
     this._errorReceived = true;
+    // HA heard sound but recognized no words: let the live transcript decide
+    // between a real turn and noise before reporting anything.
+    if (NO_SPEECH_ERRORS.includes(data?.code) && this._liveTurn && !this._liveTurn.handedOff) {
+      const gen = this._pipelineGen;
+      handleLiveSttFailure(this).then((outcome) => {
+        if (outcome === 'handed-off' || this._pipelineGen !== gen) return;
+        this._log.log('stt-live', `${data.code} and no live transcript - treating as no speech`);
+        endLiveTurn(this);
+        this._speechDetected = false;
+        handleError(this, data);
+      });
+      return;
+    }
+    endLiveTurn(this);
     handleError(this, data);
   }
   clearContinueState() {
