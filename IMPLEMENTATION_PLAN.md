@@ -54,7 +54,7 @@ failed, close.
 **Success Criteria**: Handles slow connect, failure and teardown without
 leaking sockets; never blocks the HA path.
 **Tests**: node tests with a fake WebSocket and fake timers.
-**Status**: Not Started
+**Status**: Complete. `src/stt-live/index.js` (`LiveTranscriber`, `PcmResampler`), tests in `tests/stt-live.test.cjs`. Verified end to end against OpenAI with 16 kHz Float32 input at real-time pace (gpt-4o-mini-transcribe, exact transcript, commit→final 534 ms).
 
 ## Stage 4: Pipeline integration
 **Goal**: With `stt_live_transcription` on, every STT turn (wake, seamless wake,
