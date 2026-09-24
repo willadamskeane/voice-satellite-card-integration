@@ -32,6 +32,15 @@ from .frontend import (
     async_unregister_resource,
 )
 from .settings_store import async_get_panel_settings, async_save_panel_settings
+from .stt_live import (
+    DEFAULT_MODEL as STT_LIVE_DEFAULT_MODEL,
+    MODELS as STT_LIVE_MODELS,
+    OPENAI_REALTIME_URL,
+    SttLiveError,
+    async_mint_client_secret,
+    build_session_request,
+    find_openai_api_key,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -415,6 +424,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     websocket_api.async_register_command(hass, ws_screensaver_state)
     websocket_api.async_register_command(hass, ws_get_panel_settings)
     websocket_api.async_register_command(hass, ws_save_panel_settings)
+    websocket_api.async_register_command(hass, ws_stt_live_session)
     register_diagnostics(hass)
 
     # Same-origin proxy for HTTP-only media sources (e.g. Music Assistant)
@@ -535,6 +545,49 @@ async def ws_save_panel_settings(
     entity_id = msg["entity_id"]
     await async_save_panel_settings(hass, entity_id, msg["config"])
     connection.send_result(msg["id"], {"success": True})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "voice_satellite/stt_live_session",
+        vol.Required("entity_id"): str,
+        vol.Optional("model", default=STT_LIVE_DEFAULT_MODEL): vol.In(STT_LIVE_MODELS),
+        vol.Optional("language"): str,
+        vol.Optional("keywords"): [str],
+    }
+)
+@websocket_api.async_response
+async def ws_stt_live_session(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Mint a short-lived OpenAI transcription session for a satellite.
+
+    Only the ephemeral client secret reaches the browser; the API key stays
+    in Home Assistant.
+    """
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    if _find_entity(hass, msg["entity_id"]) is None:
+        connection.send_error(msg["id"], "not_found", f"Satellite not found: {msg['entity_id']}")
+        return
+    try:
+        api_key = find_openai_api_key(hass)
+        body = build_session_request(msg["model"], msg.get("language"), msg.get("keywords"))
+        secret = await async_mint_client_secret(async_get_clientsession(hass), api_key, body)
+    except SttLiveError as err:
+        _LOGGER.warning("Live transcription session unavailable: %s (%s)", err, err.code)
+        connection.send_error(msg["id"], err.code, str(err))
+        return
+    except Exception as err:  # network errors must not break the voice turn
+        _LOGGER.warning("Live transcription session request failed: %s", err)
+        connection.send_error(msg["id"], "request_failed", str(err))
+        return
+    connection.send_result(
+        msg["id"],
+        {**secret, "model": msg["model"], "url": OPENAI_REALTIME_URL, "sample_rate": 24000},
+    )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
