@@ -147,10 +147,19 @@ export class ToastManager {
     }
   }
 
+  /** Error toasts stay until dismissed unless `error_toast_timeout_s` is set. */
+  _durationFor(severity) {
+    if (severity === SEVERITY.ERROR) {
+      const seconds = Number(this._session.config?.error_toast_timeout_s) || 0;
+      return seconds > 0 ? seconds * 1000 : DURATION.error;
+    }
+    return DURATION[severity] ?? 0;
+  }
+
   _resetTimer() {
     this._clearTimer();
     if (!this._current) return;
-    const duration = this._current.persistent ? 0 : (DURATION[this._current.severity] ?? 0);
+    const duration = this._current.persistent ? 0 : this._durationFor(this._current.severity);
     if (duration <= 0) return;
     const id = this._current.id;
     this._timer = setTimeout(() => {

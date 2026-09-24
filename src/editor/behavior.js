@@ -53,6 +53,11 @@ export const sttMicrophoneSchema = [
         selector: { number: { min: 0, max: 1000, step: 50, mode: 'slider', unit_of_measurement: 'ms' } },
       },
       { name: 'stt_followup_chime', default: false, selector: { boolean: {} } },
+      {
+        name: 'error_toast_timeout_s',
+        default: 0,
+        selector: { number: { min: 0, max: 300, step: 5, mode: 'slider', unit_of_measurement: 's' } },
+      },
       { name: 'stt_live_transcription', default: false, selector: { boolean: {} } },
       {
         name: 'stt_live_model',
@@ -224,6 +229,7 @@ export const behaviorLabels = {
   seamless_wake_command: t(null, 'editor.behavior.seamless_wake_command', 'Seamless wake command (experimental)'),
   stt_followup_delay_ms: t(null, 'editor.behavior.stt_followup_delay_ms', 'Follow-up listen delay'),
   stt_followup_chime: t(null, 'editor.behavior.stt_followup_chime', 'Follow-up ready chime'),
+  error_toast_timeout_s: t(null, 'editor.behavior.error_toast_timeout_s', 'Error notice timeout'),
   stt_live_transcription: t(null, 'editor.behavior.stt_live_transcription', 'Live transcription (OpenAI)'),
   stt_live_model: t(null, 'editor.behavior.stt_live_model', 'Live transcription model'),
 };
@@ -249,6 +255,7 @@ export const behaviorHelpers = {
   timer_tts_text: t(null, 'editor.behavior.helper_timer_tts_text', 'Phrase for unnamed timers. Translate this for the language you use with this satellite.'),
   timer_named_tts_text: t(null, 'editor.behavior.helper_timer_named_tts_text', 'Phrase for named timers. Use %%TIMER_NAME%% where the timer name should be inserted.'),
   stt_followup_delay_ms: t(null, 'editor.behavior.helper_stt_followup_delay_ms', 'Pause between the assistant finishing speaking and the mic listening again on follow-up turns. Use this if the tail of the response (last word or two) is being captured into your next reply. Common on tablets without hardware echo cancellation, especially with synthesized voices like Piper. Try 300-500 ms; leave at 0 if follow-ups already work cleanly.'),
+  error_toast_timeout_s: t(null, 'editor.behavior.helper_error_toast_timeout_s', 'Clear "Voice Satellite error" notices after this many seconds. 0 keeps them on screen until dismissed, which suits a device you check on but not an unattended wall tablet.'),
   stt_live_transcription: t(null, 'editor.behavior.helper_stt_live_transcription', 'Show your words on screen while you speak and send a faster transcript to the assistant. Streams the command to OpenAI using the key from the OpenAI Conversation integration; Home Assistant\'s own speech-to-text still runs as a fallback. Kiosk Satellite streams audio to the page instead of uploading it natively while this is on.'),
   stt_live_model: t(null, 'editor.behavior.helper_stt_live_model', 'The OpenAI transcription model. Only the live models show words while you speak; the others transcribe when you finish. The model must be allowed in your OpenAI project.'),
   stt_followup_chime: t(null, 'editor.behavior.helper_stt_followup_chime', 'Play the wake chime when the mic starts listening for a follow-up turn, so you have an audible "speak now" cue. Pairs naturally with a non-zero follow-up listen delay.'),

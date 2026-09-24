@@ -371,7 +371,7 @@ export class VoiceSatelliteSession {
       'satellite_entity', 'disable_muted_microphone_warning', 'debug',
       ...micKeys,
       'seamless_wake_command', 'stt_followup_delay_ms', 'stt_followup_chime',
-      'stt_live_model',
+      'stt_live_model', 'error_toast_timeout_s',
       'reactive_bar', 'reactive_bar_update_interval_ms',
       'chat_show_user_command', 'chat_show_assistant_response', 'chat_show_tool_usage',
       'chat_hide_sentiment_tags',

@@ -110,6 +110,8 @@ export default {
       seamless_wake_command: 'Seamless wake command (experimental)',
       stt_followup_delay_ms: 'Follow-up listen delay',
       stt_followup_chime: 'Follow-up ready chime',
+      error_toast_timeout_s: 'Error notice timeout',
+      helper_error_toast_timeout_s: 'Clear "Voice Satellite error" notices after this many seconds. 0 keeps them on screen until dismissed, which suits a device you check on but not an unattended wall tablet.',
       stt_live_transcription: 'Live transcription (OpenAI)',
       stt_live_model: 'Live transcription model',
       helper_stt_live_transcription: "Show your words on screen while you speak and send a faster transcript to the assistant. Streams the command to OpenAI using the key from the OpenAI Conversation integration; Home Assistant's own speech-to-text still runs as a fallback. Kiosk Satellite streams audio to the page instead of uploading it natively while this is on.",

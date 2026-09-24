@@ -111,6 +111,8 @@ export const DEFAULT_CONFIG = {
   // Off by default (the existing flow continues silently).  Useful as an
   // audible "speak now" cue when paired with a follow-up listen delay.
   stt_followup_chime: false,
+  // Seconds before an error toast clears itself; 0 keeps it until dismissed.
+  error_toast_timeout_s: 0,
   // Live transcription: stream the command to an OpenAI Realtime
   // transcription session (key minted by the integration from the OpenAI
   // Conversation entry), show the words while the user speaks, and hand the
