@@ -362,6 +362,8 @@ export class VoiceSatelliteSession {
       // mode, so live toggle changes rebind the wake-word stream).
       'stt_echo_cancellation', 'stt_noise_suppression',
       'stt_auto_gain_control', 'stt_voice_isolation',
+      // decides whether a Kiosk app may upload audio natively
+      'stt_live_transcription',
       // Browser input device.
       'microphone_device_id',
     ];
@@ -369,6 +371,7 @@ export class VoiceSatelliteSession {
       'satellite_entity', 'disable_muted_microphone_warning', 'debug',
       ...micKeys,
       'seamless_wake_command', 'stt_followup_delay_ms', 'stt_followup_chime',
+      'stt_live_model',
       'reactive_bar', 'reactive_bar_update_interval_ms',
       'chat_show_user_command', 'chat_show_assistant_response', 'chat_show_tool_usage',
       'chat_hide_sentiment_tags',

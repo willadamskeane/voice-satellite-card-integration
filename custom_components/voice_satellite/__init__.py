@@ -881,6 +881,7 @@ async def ws_run_pipeline(
                     pipeline_id_override=pipeline_id_override,
                     conversation_id=conversation_id,
                     extra_system_prompt=extra_system_prompt,
+                    wake_word_slot=wake_word_slot,
                 ),
                 name=f"voice_satellite.{entity.satellite_name}_pipeline_text",
             )

@@ -29,6 +29,9 @@ export class AudioManager {
   constructor(card) {
     this._card = card;
     this._log = card.logger;
+    // Receives each 16 kHz chunk sent to Home Assistant during a live
+    // transcription turn: (samples: Float32Array, sampleRate) => void.
+    this.liveSink = null;
 
     this._audioContext = null;
     this._mediaStream = null;

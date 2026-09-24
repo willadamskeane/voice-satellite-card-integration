@@ -1113,6 +1113,7 @@ class VoiceSatelliteEntity(AssistSatelliteEntity):
         pipeline_id_override: str | None = None,
         conversation_id: str | None = None,
         extra_system_prompt: str | None = None,
+        wake_word_slot: int | None = None,
     ) -> None:
         """Run a bridged pipeline with TEXT input (start_stage=intent).
 
@@ -1163,6 +1164,10 @@ class VoiceSatelliteEntity(AssistSatelliteEntity):
         start_stage_enum = stage_map.get(start_stage, PipelineStage.INTENT)
         end_stage_enum = stage_map.get(end_stage, PipelineStage.TTS)
 
+        # A live-transcription turn continues as a text run: keep the wake
+        # word's pipeline slot so Pipeline 2 turns stay on Pipeline 2.
+        if wake_word_slot in (1, 2):
+            self._active_wake_word_slot = wake_word_slot
         pipeline_id = pipeline_id_override or self._resolve_pipeline()
 
         try:

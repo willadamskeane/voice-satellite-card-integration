@@ -15,6 +15,8 @@ export class ChatManager {
     this._streamEl = null;
     this._streamedResponse = '';
     this._thinkingEl = null;
+    // The user's words while live transcription is still hearing them.
+    this._liveUserEl = null;
 
     // Reusable fade span pool - grouped spans for efficient DOM updates
     this._fadeSpans = null;
@@ -60,7 +62,26 @@ export class ChatManager {
   }
 
   showTranscription(text) {
+    // A live transcript already has a bubble: settle it on the final text.
+    if (this._liveUserEl) {
+      this._card.ui.updateChatText(this._liveUserEl, text);
+      this._liveUserEl = null;
+      return;
+    }
     this.addUser(text);
+  }
+
+  /**
+   * Show the user's words as live transcription hears them, updating one
+   * bubble in place; showTranscription() settles it.
+   */
+  showLiveTranscription(text) {
+    if (!text || !this._shows('chat_show_user_command')) return;
+    if (this._liveUserEl) {
+      this._card.ui.updateChatText(this._liveUserEl, text);
+    } else {
+      this._liveUserEl = this._card.ui.addChatMessage(text, 'user') || null;
+    }
   }
 
   showResponse(text) {
@@ -180,6 +201,7 @@ export class ChatManager {
     this._card.ui.clearChat();
     this._scroller.reset();
     this._streamEl = null;
+    this._liveUserEl = null;
     this._streamedResponse = '';
     this._fadeSpans = null;
     this._solidNode = null;

@@ -111,6 +111,13 @@ export const DEFAULT_CONFIG = {
   // Off by default (the existing flow continues silently).  Useful as an
   // audible "speak now" cue when paired with a follow-up listen delay.
   stt_followup_chime: false,
+  // Live transcription: stream the command to an OpenAI Realtime
+  // transcription session (key minted by the integration from the OpenAI
+  // Conversation entry), show the words while the user speaks, and hand the
+  // transcript to the intent stage. HA's own STT still runs as a fallback.
+  stt_live_transcription: false,
+  // Transcription model; empty uses the integration default.
+  stt_live_model: '',
   // Skip the wake chime and keep buffering mic audio while the STT pipeline
   // starts, so users can say "hey vesta turn off the lights" in one run.
   seamless_wake_command: false,

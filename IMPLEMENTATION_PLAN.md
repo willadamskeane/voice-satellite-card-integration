@@ -66,7 +66,15 @@ bypassed in this mode (audio must reach the page).
 fallback to HA text, and no-speech runs.
 **Tests**: node tests on PipelineManager / session events; Python test for the
 text run slot.
-**Status**: Not Started
+**Status**: Complete (pending on-device check). `src/pipeline/live-turn.js` +
+hooks in PipelineManager (start/stop/run-start/stt-end/run-end/error),
+`stt-vad-end` in session events, `AudioManager.liveSink` tapped in
+`sendAudioBuffer`, `ChatManager.showLiveTranscription`, Kiosk native
+upload disabled in live mode, text run honours `wake_word_slot`, settings
+`stt_live_transcription` / `stt_live_model`. Tests: `tests/live-turn.test.cjs`.
+Known gap (shared with `voice_satellite.show`): an error from the text run
+before its run-start is ignored as stale and the UI waits for the 60 s VAD
+watchdog.
 
 ## Stage 5: Deploy and tune on the kiosk
 **Goal**: Install the fork on HA, enable the mode on the ThinkSmart View,

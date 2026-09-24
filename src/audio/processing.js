@@ -119,6 +119,9 @@ export function sendAudioBuffer(mgr, binaryHandlerId) {
     ? resample(combined, mgr.actualSampleRate, 16000)
     : combined;
 
+  // Live transcription hears exactly what Home Assistant hears.
+  mgr.liveSink?.(resampled, 16000);
+
   const pcmData = floatTo16BitPCM(resampled);
   sendBinaryAudio(mgr.card, pcmData, binaryHandlerId);
 }

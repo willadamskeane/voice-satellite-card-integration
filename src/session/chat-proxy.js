@@ -48,6 +48,10 @@ export class ChatBroadcastProxy {
     for (const c of this._cards) c.chat.showTranscription(text);
   }
 
+  showLiveTranscription(text) {
+    for (const c of this._cards) c.chat.showLiveTranscription(text);
+  }
+
   showResponse(text) {
     for (const c of this._cards) c.chat.showResponse(text);
   }

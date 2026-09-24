@@ -17,6 +17,16 @@ import { resumeNativeWake } from '../wake-word/native-handoff.js';
 import { subscribePipelineRun, setupReconnectListener } from './comms.js';
 import { subscribeKioskPipelineRun, nativePipelinePreferred } from './kiosk-transport.js';
 import {
+  beginLiveTurn,
+  endLiveTurn,
+  handleLiveRunStart,
+  handleLiveSttEnd,
+  handleLiveVadEnd,
+  liveTranscriptionEnabled,
+  liveTurnOwnsRunEnd,
+  liveTurnSwallowsError,
+} from './live-turn.js';
+import {
   handleRunStart,
   handleWakeWordStart,
   handleWakeWordEnd,
@@ -63,6 +73,8 @@ export class PipelineManager {
     this._runStartReceived = false;
     this._wakeWordPhase = false;
     this._errorReceived = false;
+    // The live transcription turn in progress (see live-turn.js).
+    this._liveTurn = null;
     // Whether STT reported speech (stt-vad-start) in the current run.
     this._speechDetected = false;
 
@@ -139,6 +151,8 @@ export class PipelineManager {
   set askQuestionCallback(val) { this._askQuestionCallback = val; }
   get askQuestionHandled() { return this._askQuestionHandled; }
   set askQuestionHandled(val) { this._askQuestionHandled = val; }
+  get liveTurn() { return this._liveTurn; }
+  set liveTurn(val) { this._liveTurn = val; }
   get currentSttText() { return this._currentSttText; }
   set currentSttText(val) { this._currentSttText = val; }
   get currentToolCalls() { return this._currentToolCalls; }
@@ -213,6 +227,13 @@ export class PipelineManager {
       runConfig.pipeline_id = opts.pipeline_id;
     }
     const isTextInput = !!opts.intent_input;
+
+    // Live transcription: the HA run ends after STT and the same audio is
+    // also transcribed live; ask_question keeps HA's own STT turn.
+    if (!isTextInput && runConfig.start_stage === 'stt' && !this._askQuestionCallback
+      && liveTranscriptionEnabled(this._card)) {
+      beginLiveTurn(this, runConfig);
+    }
 
     // Delegated transport (Kiosk Satellite): the run must live on the same
     // side as its audio, and audio decides delegation when the mic opens -
@@ -415,6 +436,7 @@ export class PipelineManager {
 
   async stop() {
     this._clearScheduledWork();
+    endLiveTurn(this);
 
     // Increment generation first - any in-flight start() will see the
     // mismatch after its next await and abort cleanly.
@@ -627,6 +649,9 @@ export class PipelineManager {
     this._errorReceived = false;
     this._speechDetected = false;
     handleRunStart(this, data);
+    // an intent run started by a live turn reports the turn's transcript
+    const liveText = handleLiveRunStart(this);
+    if (liveText) this._currentSttText = liveText;
     this._startTokenRefreshTimer();
   }
 
@@ -653,7 +678,12 @@ export class PipelineManager {
     handleWakeWordEnd(this, data);
   }
 
-  handleSttEnd(data) { handleSttEnd(this, data); }
+  handleSttVadEnd() { handleLiveVadEnd(this); }
+
+  handleSttEnd(data) {
+    if (handleLiveSttEnd(this, data?.stt_output?.text || '')) return;
+    handleSttEnd(this, data);
+  }
   handleIntentProgress(data) { handleIntentProgress(this, data); }
   handleIntentEnd(data) { handleIntentEnd(this, data); }
   handleTtsEnd(data) { handleTtsEnd(this, data); }
@@ -661,6 +691,10 @@ export class PipelineManager {
   handleRunEnd() {
     if (!this._runStartReceived) {
       this._log.log('pipeline', 'Ignoring stale run-end (no run-start received for this subscription)');
+      return;
+    }
+    if (liveTurnOwnsRunEnd(this)) {
+      this._log.log('stt-live', 'STT run ended - the live turn continues');
       return;
     }
     // A run-end during wake_word phase (before valid wake_word-end) without
@@ -679,6 +713,11 @@ export class PipelineManager {
       this._log.log('pipeline', 'Ignoring stale error (no run-start received for this subscription)');
       return;
     }
+    if (liveTurnSwallowsError(this)) {
+      this._log.log('stt-live', `Ignoring ${data?.code} from the replaced STT run`);
+      return;
+    }
+    endLiveTurn(this);
     this._errorReceived = true;
     handleError(this, data);
   }

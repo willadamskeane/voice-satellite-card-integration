@@ -750,6 +750,7 @@ export function handlePipelineMessage(session, message) {
     case 'stt-vad-end':
       session.logger.log('event', 'VAD: speech ended');
       session.pipeline.armVadWatchdog();
+      session.pipeline.handleSttVadEnd();
       break;
     case 'stt-end': session.pipeline.handleSttEnd(eventData); break;
     case 'intent-start':

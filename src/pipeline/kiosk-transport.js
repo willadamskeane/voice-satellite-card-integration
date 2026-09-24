@@ -26,7 +26,10 @@ import * as kiosk from '../kiosk/index.js';
  * @param {object} card - Card/session instance
  */
 export function nativePipelinePreferred(card) {
-  return card._nativeWakeActive === true
+  // Live transcription needs the audio in the page, so the app may stream
+  // it here but not upload it natively.
+  return card.config?.stt_live_transcription !== true
+    && card._nativeWakeActive === true
     && !card._ksPipelineBroken
     && kiosk.supportsNativePipeline();
 }
