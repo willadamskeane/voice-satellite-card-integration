@@ -27,7 +27,7 @@ receives `delta` events while audio streams and a `completed` event after
 `input_audio_buffer.commit`; commit-to-completed latency measured.
 **Tests**: Scripted spike (not shipped): mint key server-side, stream a speech
 clip at real-time pace from a browser, record event timings.
-**Status**: In Progress. Confirmed (2026-09-23): `POST /v1/realtime/client_secrets`
+**Status**: Complete. Confirmed (2026-09-23): `POST /v1/realtime/client_secrets`
 with `session.type: transcription` mints `ek_…` keys; WebSocket
 `wss://api.openai.com/v1/realtime?intent=transcription` with subprotocols
 `['realtime', 'openai-insecure-api-key.<ek>']` works; `turn_detection: null` +
@@ -35,8 +35,9 @@ manual `input_audio_buffer.commit` works. `gpt-4o-mini-transcribe` streams its
 deltas only after the commit (commit→completed 450–640 ms, exact transcript on
 a clean clip). The user's OpenAI project blocks `gpt-live-transcribe`,
 `gpt-realtime-whisper`, `gpt-4o-transcribe` and `gpt-transcribe`
-(`model_not_found`); waiting on the user to allow `gpt-live-transcribe`, then
-re-run to confirm deltas arrive during speech.
+(`model_not_found`) until the user allowed `gpt-live-transcribe`; after that
+deltas arrive during speech (~0.2-0.4 s behind the audio) and commit→completed
+was 609 ms. Complete.
 
 ## Stage 2: Ephemeral key command (Python)
 **Goal**: `voice_satellite/stt_live_session` websocket command returns a
@@ -82,4 +83,8 @@ measure end-of-speech-to-response latency and accuracy against the current
 setup, tune VAD / prompt keywords.
 **Success Criteria**: Words appear while speaking; faster than HA Cloud STT.
 **Tests**: Pipeline debug timings before/after; real spoken commands.
-**Status**: Not Started
+**Status**: In Progress. Fork build 2026.9.12-live.1 installed on HA
+(backup /tmp/voice_satellite-2026.9.11-backup.tgz on the HA host);
+voice_satellite_fixes removed; card URLs consistent; kiosk panel settings:
+stt_live_transcription true, stt_live_model '' (gpt-live-transcribe),
+error_toast_timeout_s 30. Next: real spoken commands, pipeline debug timings.
