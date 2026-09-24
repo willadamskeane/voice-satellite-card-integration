@@ -71,6 +71,29 @@ class SessionRequestTest(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'invalid_model')
 
 
+class KeywordTest(unittest.TestCase):
+    def test_keeps_spoken_names_including_possessives(self):
+        for name in ("Will's Study", "Grandma's Lamp", 'Eufy S1 Pro', 'Gaming 3', 'Kitchen downlight 1'):
+            self.assertEqual(stt_live.clean_keyword(name), name)
+
+    def test_drops_serials_and_markup(self):
+        for name in ('Nanoleaf A19 1A1W', 'TX-NR7100', 'AS-SMX730[Cast]', '"Roller Shutters":stop',
+                     'Third Reality, Inc 3RSP019BZ', 'will_s_study Override', 'Shed A/C', '', None,
+                     'Smart Hose Tap Timer South Yard zone'):
+            self.assertIsNone(stt_live.clean_keyword(name), name)
+
+    def test_orders_areas_then_aliases_then_short_names_and_dedupes(self):
+        keywords = stt_live.build_keywords(
+            ["Will's Study", 'Kitchen'], ['the den'],
+            ['Kitchen Pendant Lights', 'kitchen', 'Quntis Glow', 'AS-AFTKRT[Cast]'],
+        )
+        self.assertEqual(keywords, ["Will's Study", 'Kitchen', 'the den', 'Quntis Glow', 'Kitchen Pendant Lights'])
+
+    def test_caps_the_list(self):
+        names = [f'Lamp {chr(65 + i // 26)}{chr(65 + i % 26)}' for i in range(300)]
+        self.assertEqual(len(stt_live.build_keywords([], [], names)), stt_live.MAX_KEYWORDS)
+
+
 class ApiKeyTest(unittest.TestCase):
     def test_reads_the_openai_conversation_entry(self):
         hass = SimpleNamespace(config_entries=config_entries(
@@ -112,6 +135,7 @@ def load_handler(session):
         'async_get_clientsession': lambda hass: session,
         'find_openai_api_key': stt_live.find_openai_api_key,
         'build_session_request': stt_live.build_session_request,
+        'collect_home_keywords': lambda hass: hass.keywords,
         'async_mint_client_secret': stt_live.async_mint_client_secret,
         'SttLiveError': stt_live.SttLiveError,
         'OPENAI_REALTIME_URL': stt_live.OPENAI_REALTIME_URL,
@@ -130,6 +154,7 @@ class CommandTest(unittest.IsolatedAsyncioTestCase):
         self.hass = SimpleNamespace(
             entities={'assist_satellite.kiosk': object()},
             config_entries=config_entries(('openai_conversation', {'api_key': 'sk-real'})),
+            keywords=["Will's Study", 'Quntis Glow'],
         )
         self.msg = {'id': 7, 'entity_id': 'assist_satellite.kiosk', 'model': 'gpt-live-transcribe', 'language': 'en-US'}
 
@@ -141,6 +166,14 @@ class CommandTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['url'], stt_live.OPENAI_REALTIME_URL)
         self.assertEqual(result['sample_rate'], 24000)
         self.assertNotIn('sk-real', repr(result))
+
+    async def test_uses_the_home_names_unless_the_card_sends_its_own(self):
+        session = FakeSession()
+        handler = load_handler(session)
+        await handler(self.hass, self.connection, self.msg)
+        await handler(self.hass, self.connection, {**self.msg, 'keywords': ['Billy']})
+        sent = [r['json']['session']['audio']['input']['transcription'].get('keywords') for r in session.requests]
+        self.assertEqual(sent, [["Will's Study", 'Quntis Glow'], ['Billy']])
 
     async def test_unknown_satellite_is_rejected_before_calling_openai(self):
         session = FakeSession()

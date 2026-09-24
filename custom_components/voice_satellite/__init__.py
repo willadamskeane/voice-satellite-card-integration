@@ -39,6 +39,7 @@ from .stt_live import (
     SttLiveError,
     async_mint_client_secret,
     build_session_request,
+    collect_home_keywords,
     find_openai_api_key,
 )
 
@@ -574,7 +575,12 @@ async def ws_stt_live_session(
         return
     try:
         api_key = find_openai_api_key(hass)
-        body = build_session_request(msg["model"], msg.get("language"), msg.get("keywords"))
+        # the home's own names help with rooms and devices the model
+        # wouldn't otherwise spell right; the card may send its own list
+        keywords = msg.get("keywords")
+        if keywords is None:
+            keywords = collect_home_keywords(hass)
+        body = build_session_request(msg["model"], msg.get("language"), keywords)
         secret = await async_mint_client_secret(async_get_clientsession(hass), api_key, body)
     except SttLiveError as err:
         _LOGGER.warning("Live transcription session unavailable: %s (%s)", err, err.code)
