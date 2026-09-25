@@ -1,5 +1,6 @@
 """Live transcription session minting, without a Home Assistant install."""
 
+import __future__
 import ast
 import importlib.util
 import logging
@@ -140,7 +141,10 @@ def load_handler(session):
         'SttLiveError': stt_live.SttLiveError,
         'OPENAI_REALTIME_URL': stt_live.OPENAI_REALTIME_URL,
     }
-    exec(compile(ast.Module(body=[handler], type_ignores=[]), str(ROOT / '__init__.py'), 'exec'), namespace)
+    # __init__.py defers annotations, so its Home Assistant type hints are never evaluated
+    code = compile(ast.Module(body=[handler], type_ignores=[]), str(ROOT / '__init__.py'), 'exec',
+                   flags=__future__.annotations.compiler_flag)
+    exec(code, namespace)
     return namespace['ws_stt_live_session']
 
 
