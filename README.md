@@ -18,7 +18,7 @@
 
 This is [Will Adams-Keane](https://github.com/willadamskeane)'s fork of [jxlarrea/voice-satellite-card-integration](https://github.com/jxlarrea/voice-satellite-card-integration). It runs on a Lenovo ThinkSmart View wall tablet (Kiosk Satellite app, far-field mic) with an OpenAI conversation agent. There, Home Assistant Cloud speech-to-text was slow and often wrong, nothing showed what the tablet had heard until the user finished speaking, and every false wake left a "Voice Satellite error" toast on screen until someone tapped it.
 
-These changes live on the `feat/live-transcription` branch, which is based on upstream 2026.9.12 and versioned `2026.9.12-live.1`.
+**`main` carries the fork**, merged with upstream releases as they come out. Versions are upstream's with a suffix (`2026.9.13-live.1` is based on upstream 2026.9.13). To install it with HACS, add `https://github.com/willadamskeane/voice-satellite-card-integration` as a custom repository (type Integration) instead of the default Voice Satellite entry, so HACS offers this fork's releases rather than upstream's.
 
 ### What's different
 
